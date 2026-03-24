@@ -1,4 +1,4 @@
-# ParsetArmor
+# Parser Armor
 
 Конвертер брони из OptiFine CIT в формат RPT (RPT Resource Pack).
 
