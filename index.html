@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
+    <title>ParsetArmor - Armor Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #0f1115;
+            --bg-panel: #1a1c23;
+            --bg-input: #272a35;
+            --border-color: #2e323f;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-main: #f3f4f6;
+            --text-dim: #9ca3af;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --radius: 6px;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            background: var(--bg-base); 
+            color: var(--text-main); 
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
+            height: 100vh; 
+            display: flex; 
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-panel); }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        input, select, button { font-family: inherit; }
+        
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: var(--radius);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
+        button:disabled { background: #374151; color: #9ca3af; cursor: not-allowed; transform: none; }
+        
+        button.success { background: var(--success); }
+        button.success:hover:not(:disabled) { background: #059669; }
+        
+        button.danger { background: var(--error); }
+        button.danger:hover:not(:disabled) { background: #dc2626; }
+        
+        button.secondary {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+        button.secondary:hover:not(:disabled) { background: var(--bg-input); }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus { border-color: var(--accent); }
+
+        header {
+            height: 60px;
+            background: var(--bg-panel);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+            flex-shrink: 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+        
+        .brand-area { display: flex; align-items: center; gap: 12px; }
+        .brand-area .logo svg { width: 32px; height: 32px; }
+        .header-title { font-weight: 700; color: #fff; font-size: 1.2em; letter-spacing: 0.5px; }
+
+        .mode-badge {
+            font-size: 0.75rem;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background-color: #4b5563;
+        }
+        .mode-badge a:hover {
+            text-decoration: underline;
+            opacity: 0.8;
+        }
+
+        #main-view {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 15px;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            flex-shrink: 0;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 0.9rem; color: var(--text-dim); font-weight: 500; }
+
+        .sidebar-main {
+            width: 380px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .tech-panel {
+            display: flex;
+            flex-direction: column;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+            z-index: 100;
+        }
+        .panel-content {
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+            z-index: 100;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: var(--radius);
+            transition: all 0.2s;
+            background: rgba(255,255,255,0.02);
+            pointer-events: auto;
+            position: relative;
+            z-index: 100;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .drop-zone-icon {
+            margin-bottom: 10px;
+            color: var(--text-dim);
+        }
+        .drop-zone-icon svg {
+            width: 48px;
+            height: 48px;
+        }
+        .drop-zone-text {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+        }
+        .drop-zone-subtext {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+
+        .file-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 4px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 6px;
+            transition: all 0.2s;
+        }
+        .file-item:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+        }
+        .file-icon { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+        }
+        .file-icon svg {
+            width: 24px;
+            height: 24px;
+            color: var(--accent);
+        }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name {
+            font-size: 0.85rem;
+            word-break: break-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-size {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+        .file-status {
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .file-status.success { color: var(--success); }
+        .file-status.error { color: var(--error); }
+        .file-status.pending { color: var(--warning); }
+        .file-remove {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            padding: 4px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .file-item:hover .file-remove { opacity: 1; }
+        .file-remove:hover { color: var(--error); }
+
+        .workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #000;
+            min-width: 0;
+        }
+
+        .log-section {
+            flex: 1;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+        }
+        
+        .log-entry { 
+            margin-bottom: 6px; 
+            word-break: break-all; 
+            line-height: 1.4;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            padding-bottom: 4px;
+        }
+        .log-entry span.time { color: var(--text-dim); font-size: 0.9em; margin-right: 8px; }
+        .log-entry.success { color: var(--success); } 
+        .log-entry.error { color: var(--error); }
+        .log-entry.normal { color: #d1d5db; }
+        .log-entry.warn { color: var(--warning); }
+
+        .action-bar {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-panel);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+        }
+        .button-row button { flex: 1; }
+
+        .file-count-info {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        .results-panel {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0,0,0,0.2);
+            display: none;
+        }
+        .results-panel.active { display: block; }
+        
+        .result-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255,255,255,0.02);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 900px) {
+            #main-view { flex-direction: column; overflow-y: auto; }
+            .sidebar-main { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); height: 400px; flex-shrink: 0; }
+            .log-section { height: 300px; flex-shrink: 0; }
+        }
+    </style>
+</head>
+<body>
+    
+    <header>
+        <div class="brand-area">
+            <div class="logo">
+                <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#3b82f6"/>
+                            <stop offset="100%" style="stop-color:#1d4ed8"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="4" y="4" width="56" height="56" rx="10" fill="url(#shieldGrad)"/>
+                    <path d="M32 14 L50 26 L50 42 C50 48 44 52 32 54 C20 52 14 48 14 42 L14 26 Z" fill="#e0e7ff" opacity="0.9"/>
+                    <path d="M32 14 L32 54" stroke="#1e3a8a" stroke-width="1.5"/>
+                    <path d="M14 26 L50 26" stroke="#1e3a8a" stroke-width="1.5"/>
+                    <rect x="24" y="30" width="16" height="4" rx="1" fill="#3b82f6"/>
+                    <rect x="24" y="38" width="16" height="4" rx="1" fill="#3b82f6"/>
+                    <rect x="24" y="46" width="16" height="4" rx="1" fill="#3b82f6"/>
+                </svg>
+            </div>
+            <div class="header-title">ParsetArmor</div>
+            <div class="mode-badge"><a href="https://optifine.net/home" target="_blank" style="color: inherit; text-decoration: none;">OptiFine</a> → <a href="https://modrinth.com/mod/rpt" target="_blank" style="color: inherit; text-decoration: none;">RPT</a></div>
+        </div>
+        <div style="color: var(--text-dim); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
+            <span>Armor Converter</span>
+        </div>
+    </header>
+
+    <main id="main-view">
+        <aside class="sidebar-main">
+            <div class="tech-panel">
+                <div class="panel-header">1. SELECT ARCHIVES</div>
+                <div class="panel-content">
+                    <div class="drop-zone" id="dropZone">
+                        <div class="drop-zone-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                            </svg>
+                        </div>
+                        <div class="drop-zone-text">Drop ZIP archives here</div>
+                        <div class="drop-zone-subtext">or click to select files</div>
+                        <input type="file" id="fileInput" multiple accept=".zip" style="display: none;">
+                    </div>
+                    <div style="font-size: 0.75rem; color: var(--text-dim); text-align: center;">
+                        Supported: .zip
+                    </div>
+                </div>
+            </div>
+
+            <div class="tech-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>2. FILES</span>
+                    <span id="fileCountText" style="font-size: 0.85rem; font-weight: normal; color: var(--text-dim); text-transform: none;">0 files</span>
+                </div>
+                <div class="file-list-container" id="fileList">
+                    <div style="text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 0.9rem;">
+                        No files selected
+                    </div>
+                </div>
+            </div>
+
+            <div class="results-panel" id="resultsPanel">
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="statLayer1">0</div>
+                        <div class="stat-label">Layer 1</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statLayer2">0</div>
+                        <div class="stat-label">Layer 2</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="statTextures">0</div>
+                        <div class="stat-label">Textures</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="action-bar">
+                <div class="file-count-info" id="fileCountInfo">Selected: 0 files</div>
+                <div class="button-row">
+                    <button id="convertBtn" disabled class="success">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Convert
+                    </button>
+                </div>
+                <div class="button-row">
+                    <button id="downloadBtn" disabled class="secondary">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download
+                    </button>
+                    <button id="clearBtn" class="danger">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <section class="workspace">
+            <div class="log-section">
+                <div class="panel-header" style="background: transparent; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Process Logs</span>
+                    <span id="status-text" style="font-size: 0.85rem; font-weight: normal; color: var(--text-dim); text-transform: none;">Ready</span>
+                </div>
+                <div id="log-container">
+                    <div class="log-entry normal"><span class="time"></span>System ready. Drop archives to start...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const fileCountText = document.getElementById('fileCountText');
+        const fileCountInfo = document.getElementById('fileCountInfo');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const logContainer = document.getElementById('log-container');
+        const statusText = document.getElementById('status-text');
+        const resultsPanel = document.getElementById('resultsPanel');
+        
+        let files = [];
+        let convertedBlob = null;
+        
+        const VALID_ARMOR_ITEMS = new Set([
+            "leather_helmet", "leather_chestplate", "leather_leggings", "leather_boots",
+            "golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots",
+            "iron_helmet", "iron_chestplate", "iron_leggings", "iron_boots",
+            "diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots",
+            "netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots",
+            "chainmail_helmet", "chainmail_chestplate", "chainmail_leggings", "chainmail_boots",
+            "turtle_helmet"
+        ]);
+
+        const MATERIALS = ["leather", "golden", "iron", "diamond", "netherite", "chainmail", "copper"];
+        const LAYER1_ITEMS = new Set(["helmet", "chestplate", "boots"]);
+        const LAYER2_ITEMS = new Set(["leggings", "pants"]);
+        
+        function addLog(message, type = 'normal') {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="time">[${time}]</span> ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function clearLog() {
+            logContainer.innerHTML = '';
+        }
+        
+        function setStatus(text) {
+            statusText.textContent = text;
+        }
+        
+        function parseProperties(content) {
+            const props = {};
+            const lines = content.split('\n');
+            for (let line of lines) {
+                line = line.trim();
+                if (!line || line.startsWith('#') || line.startsWith('!')) continue;
+                const idx = line.indexOf('=');
+                if (idx === -1) continue;
+                const key = line.substring(0, idx).trim();
+                const value = line.substring(idx + 1).trim();
+                props[key] = value;
+            }
+            return props;
+        }
+
+        function convertUnicode(text) {
+            try {
+                return text.replace(/\\u[0-9a-fA-F]{4}/g, (match) => {
+                    return String.fromCharCode(parseInt(match.replace('\\u', ''), 16));
+                });
+            } catch {
+                return text;
+            }
+        }
+
+        function getNamesFromDisplay(nameStr) {
+            if (!nameStr) return [];
+            nameStr = convertUnicode(nameStr);
+            const match = nameStr.match(/iregex:\(([^)]+)\)/);
+            if (match) {
+                const inner = match[1];
+                if (inner.includes('|')) {
+                    return inner.split('|').map(n => n.trim());
+                }
+                return [inner.trim()];
+            }
+            if (nameStr.includes('|')) {
+                return nameStr.split('|').map(n => n.trim());
+            }
+            return [nameStr];
+        }
+
+        function processFile(props) {
+            const armorType = props.type || props["type"] || "";
+            const matchItems = props.matchItems || props.Items || props.Item || "";
+            
+            if (armorType !== "armor" && armorType !== "item" && armorType !== "elytra") {
+                return null;
+            }
+            
+            if (armorType === "item" || armorType === "elytra") {
+                if (!matchItems) return null;
+                const itemsList = matchItems.split(' ').filter(item => VALID_ARMOR_ITEMS.has(item));
+                if (itemsList.length === 0) return null;
+            }
+            
+            const names = getNamesFromDisplay(props["nbt.display.Name"] || props["nbt.display.Name"] || "");
+            if (names.length === 0) return null;
+            
+            const itemsList = matchItems.split(' ');
+            
+            const result = { layer1: [], layer2: [] };
+            
+            for (const material of MATERIALS) {
+                const layer1Key = `texture.${material}_layer_1`;
+                const layer2Key = `texture.${material}_layer_2`;
+                
+                const actualHasLayer1 = itemsList.some(item => {
+                    for (const t of LAYER1_ITEMS) {
+                        if (item.includes(t)) return true;
+                    }
+                    return false;
+                });
+                
+                const actualHasLayer2 = itemsList.some(item => {
+                    for (const t of LAYER2_ITEMS) {
+                        if (item.includes(t)) return true;
+                    }
+                    return false;
+                });
+                
+                const textureLayer1 = props[layer1Key];
+                const textureLayer2 = props[layer2Key];
+                
+                if (textureLayer1 && actualHasLayer1) {
+                    result.layer1.push({
+                        material,
+                        texture: textureLayer1,
+                        names: names
+                    });
+                }
+                
+                if (textureLayer2 && actualHasLayer2) {
+                    result.layer2.push({
+                        material,
+                        texture: textureLayer2,
+                        names: names
+                    });
+                }
+            }
+            
+            return result;
+        }
+        
+        async function processZip(file) {
+            addLog(`Processing: ${file.name}`, 'normal');
+            setStatus(`Processing: ${file.name}`);
+            
+            try {
+                const zip = await JSZip.loadAsync(file);
+                
+                const propertiesFiles = [];
+                let totalFiles = 0;
+                
+                zip.forEach((relativePath, zipEntry) => {
+                    if (!zipEntry.dir) totalFiles++;
+                });
+                
+                addLog(`Total files in archive: ${totalFiles}`, 'normal');
+                
+                zip.forEach((relativePath, zipEntry) => {
+                    if (zipEntry.dir) return;
+                    
+                    if (relativePath.includes('optifine/cit/') && 
+                        relativePath.endsWith('.properties') &&
+                        !relativePath.includes('_icon.properties')) {
+                        propertiesFiles.push({ path: relativePath, entry: zipEntry });
+                    }
+                });
+                
+                addLog(`Found ${propertiesFiles.length} .properties files`, 'normal');
+                
+                const convertedLayer1 = {};
+                const convertedLayer2 = {};
+                const usedTextures = new Set();
+                const allTexturesInZip = new Map();
+                
+                zip.forEach((relativePath, zipEntry) => {
+                    if (zipEntry.dir) return;
+                    if (relativePath.endsWith('.png')) {
+                        const fileName = relativePath.split('/').pop().replace('.png', '');
+                        if (!allTexturesInZip.has(fileName)) {
+                            allTexturesInZip.set(fileName, relativePath);
+                        }
+                    }
+                });
+                
+                const totalProps = propertiesFiles.length;
+                
+                for (let i = 0; i < propertiesFiles.length; i++) {
+                    const { path, entry } = propertiesFiles[i];
+                    const content = await entry.async('string');
+                    const props = parseProperties(content);
+                    const processed = processFile(props);
+                    
+                    if (processed) {
+                        for (const item of processed.layer1) {
+                            if (!convertedLayer1[item.material]) {
+                                convertedLayer1[item.material] = [];
+                            }
+                            
+                            const caseObj = {
+                                when: item.names,
+                                child: { type: "rpt:apply", value: `textures/parse_armor/${item.texture}.png` }
+                            };
+                            
+                            const exists = convertedLayer1[item.material].some(c => 
+                                c.child.value === caseObj.child.value &&
+                                JSON.stringify(c.when) === JSON.stringify(caseObj.when)
+                            );
+                            
+                            if (!exists) {
+                                convertedLayer1[item.material].push(caseObj);
+                            }
+                            usedTextures.add(item.texture);
+                        }
+                        
+                        for (const item of processed.layer2) {
+                            if (!convertedLayer2[item.material]) {
+                                convertedLayer2[item.material] = [];
+                            }
+                            
+                            const caseObj = {
+                                when: item.names,
+                                child: { type: "rpt:apply", value: `textures/parse_armor/${item.texture}.png` }
+                            };
+                            
+                            const exists = convertedLayer2[item.material].some(c => 
+                                c.child.value === caseObj.child.value &&
+                                JSON.stringify(c.when) === JSON.stringify(caseObj.when)
+                            );
+                            
+                            if (!exists) {
+                                convertedLayer2[item.material].push(caseObj);
+                            }
+                            usedTextures.add(item.texture);
+                        }
+                    }
+                    
+                    if ((i + 1) % 20 === 0 || (i + 1) === totalProps) {
+                        setStatus(`Processing ${i + 1}/${totalProps}...`);
+                    }
+                }
+                
+                addLog(`Converting ${Object.keys(convertedLayer1).length} layer 1 items...`, 'normal');
+                
+                for (const [material, cases] of Object.entries(convertedLayer1)) {
+                    const output = {
+                        type: "rpt:component",
+                        component: "custom_name",
+                        cases: cases
+                    };
+                    zip.file(`assets/minecraft/rpt/swappers/textures/entity/equipment/humanoid/${material}.json`, JSON.stringify(output, null, 4));
+                }
+                
+                for (const [material, cases] of Object.entries(convertedLayer2)) {
+                    const output = {
+                        type: "rpt:component",
+                        component: "custom_name",
+                        cases: cases
+                    };
+                    zip.file(`assets/minecraft/rpt/swappers/textures/entity/equipment/humanoid_leggings/${material}.json`, JSON.stringify(output, null, 4));
+                }
+                
+                addLog(`Copying ${usedTextures.size} textures...`, 'normal');
+                
+                for (const textureName of usedTextures) {
+                    const texturePath = allTexturesInZip.get(textureName);
+                    if (texturePath) {
+                        const textureData = await zip.file(texturePath).async('blob');
+                        zip.file(`assets/minecraft/textures/parse_armor/${textureName}.png`, textureData);
+                    }
+                    
+                    const iconPath = allTexturesInZip.get(`${textureName}_icon`);
+                    if (iconPath) {
+                        const iconData = await zip.file(iconPath).async('blob');
+                        zip.file(`assets/minecraft/textures/parse_armor/${textureName}_icon.png`, iconData);
+                    }
+                }
+                
+                convertedBlob = await zip.generateAsync({ type: "blob" });
+                
+                document.getElementById('statLayer1').textContent = Object.keys(convertedLayer1).length;
+                document.getElementById('statLayer2').textContent = Object.keys(convertedLayer2).length;
+                document.getElementById('statTextures').textContent = usedTextures.size;
+                resultsPanel.classList.add('active');
+                
+                updateFileStatus(file.name, 'success', `${Object.keys(convertedLayer1).length + Object.keys(convertedLayer2).length} items`);
+                addLog(`Done: ${file.name} converted successfully`, 'success');
+                
+            } catch (e) {
+                addLog(`! Error processing ${file.name}: ${e.message}`, 'error');
+                updateFileStatus(file.name, 'error', 'Error');
+                setStatus(`Error: ${file.name}`);
+            }
+            
+            updateButtons();
+        }
+        
+        function updateFileStatus(fileName, status, statusText) {
+            const item = document.querySelector(`[data-file="${fileName}"]`);
+            if (item) {
+                const statusSpan = item.querySelector('.file-status');
+                statusSpan.className = `file-status ${status}`;
+                statusSpan.textContent = statusText;
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function renderFileList() {
+            fileCountText.textContent = `${files.length} files`;
+            fileCountInfo.textContent = `Selected: ${files.length} files`;
+            
+            if (files.length === 0) {
+                fileList.innerHTML = `
+                    <div style="text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 0.9rem;">
+                        No files selected
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            files.forEach(file => {
+                html += `
+                    <div class="file-item" data-file="${file.name}">
+                        <span class="file-icon">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </span>
+                        <div class="file-info">
+                            <div class="file-name">${file.name}</div>
+                            <div class="file-size">${formatFileSize(file.size)}</div>
+                        </div>
+                        <span class="file-status pending">Pending</span>
+                        <button class="file-remove" onclick="removeFile('${file.name}')" title="Remove">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            });
+            
+            fileList.innerHTML = html;
+        }
+        
+        function removeFile(fileName) {
+            files = files.filter(f => f.name !== fileName);
+            renderFileList();
+            updateButtons();
+        }
+        
+        function updateButtons() {
+            const hasFiles = files.length > 0;
+            
+            convertBtn.disabled = !hasFiles;
+            downloadBtn.disabled = !convertedBlob;
+            
+            if (hasFiles) {
+                setStatus('Ready to convert');
+            } else if (convertedBlob) {
+                setStatus('Conversion complete');
+            } else {
+                setStatus('Ready');
+            }
+        }
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const droppedFiles = Array.from(e.dataTransfer.files)
+                .filter(f => f.name.endsWith('.zip'));
+            
+            droppedFiles.forEach(file => {
+                if (!files.some(f => f.name === file.name)) {
+                    files.push(file);
+                }
+            });
+            
+            renderFileList();
+            updateButtons();
+            addLog(`Added files: ${droppedFiles.length}`, 'normal');
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            const selectedFiles = Array.from(e.target.files);
+            selectedFiles.forEach(file => {
+                if (!files.some(f => f.name === file.name)) {
+                    files.push(file);
+                }
+            });
+            renderFileList();
+            updateButtons();
+            addLog(`Added files: ${selectedFiles.length}`, 'normal');
+        });
+        
+        convertBtn.addEventListener('click', async () => {
+            addLog('=== CONVERSION STARTED ===', 'normal');
+            convertedBlob = null;
+            resultsPanel.classList.remove('active');
+            
+            for (const file of files) {
+                await processZip(file);
+            }
+            
+            addLog('=== CONVERSION COMPLETE ===', 'success');
+            setStatus('Conversion complete');
+            renderFileList();
+        });
+        
+        downloadBtn.addEventListener('click', () => {
+            if (convertedBlob) {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(convertedBlob);
+                link.download = files.length > 0 ? files[0].name.replace('.zip', '_parsearmor.zip') : 'parsearmor_result.zip';
+                link.click();
+                URL.revokeObjectURL(link.href);
+                addLog('File downloaded', 'success');
+            }
+        });
+        
+        clearBtn.addEventListener('click', () => {
+            files = [];
+            convertedBlob = null;
+            resultsPanel.classList.remove('active');
+            renderFileList();
+            updateButtons();
+            clearLog();
+            addLog('List cleared', 'normal');
+            setStatus('Ready');
+        });
+
+        window.removeFile = removeFile;
+    </script>
+</body>
+</html>
