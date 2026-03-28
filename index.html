@@ -5,1034 +5,1241 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="icon.svg">
-    <title>Parser Armor - Armor Converter</title>
+    <title>Parser Armor</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root {
-            --bg-base: #0d1117;
-            --bg-panel: #161b22;
-            --bg-input: #21262d;
-            --border-color: #30363d;
-            --accent: #8b5cf6;
-            --accent-hover: #7c3aed;
-            --accent-glow: rgba(139, 92, 246, 0.25);
-            --text-main: #e6edf3;
-            --text-dim: #8b949e;
-            --success: #3fb950;
-            --error: #f85149;
-            --warning: #d29922;
-            --radius: 8px;
+            --bg-base:        #080b10;
+            --bg-surface:     #0e1420;
+            --bg-card:        #131b2a;
+            --bg-elevated:    #1a2336;
+            --bg-input:       #1e2a3a;
+            --border:         #263347;
+            --border-bright:  #344560;
+            --accent:         #a78bfa;
+            --accent-dim:     #7c3aed;
+            --accent-glow:    rgba(167, 139, 250, 0.18);
+            --accent-glow2:   rgba(167, 139, 250, 0.06);
+            --cyan:           #22d3ee;
+            --cyan-glow:      rgba(34, 211, 238, 0.15);
+            --text-main:      #e2e8f4;
+            --text-sub:       #94a3b8;
+            --text-muted:     #4a5568;
+            --success:        #34d399;
+            --success-glow:   rgba(52, 211, 153, 0.15);
+            --error:          #f87171;
+            --error-glow:     rgba(248, 113, 113, 0.15);
+            --warning:        #fbbf24;
+            --radius-sm:      6px;
+            --radius:         10px;
+            --radius-lg:      16px;
         }
 
-        .lang-select {
-            background: var(--bg-input);
-            color: var(--text-main);
-            border: 1px solid var(--border-color);
-            padding: 6px 10px;
-            border-radius: var(--radius);
-            font-size: 0.8rem;
-            cursor: pointer;
-            outline: none;
-        }
-        
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-            background: var(--bg-base); 
-            color: var(--text-main); 
-            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; 
-            height: 100vh; 
-            display: flex; 
+
+        body {
+            background: var(--bg-base);
+            color: var(--text-main);
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            height: 100vh;
+            display: flex;
             flex-direction: column;
             overflow: hidden;
         }
 
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: var(--bg-panel); }
-        ::-webkit-scrollbar-thumb { background: #484f58; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6e7681; }
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
 
-        input, select, button { font-family: inherit; }
-        
-        button {
-            background: var(--accent);
-            color: white;
+        /* ── Noise overlay ── */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Header ── */
+        header {
+            position: relative;
+            z-index: 100;
+            height: 58px;
+            background: rgba(14, 20, 32, 0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-dim), transparent);
+            opacity: 0.5;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .brand-logo {
+            width: 34px; height: 34px;
+            position: relative;
+        }
+        .brand-logo svg { width: 34px; height: 34px; }
+        .brand-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 30%, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.3px;
+        }
+        .brand-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            color: var(--text-sub);
+            letter-spacing: 0.5px;
+        }
+        .brand-badge a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .brand-badge a:hover { color: #fff; }
+        .badge-arrow {
+            color: var(--text-muted);
+            font-size: 0.7rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .lang-toggle {
+            display: flex;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .lang-btn {
+            padding: 4px 10px;
+            border-radius: 16px;
             border: none;
-            padding: 10px 16px;
-            border-radius: var(--radius);
+            background: transparent;
+            color: var(--text-sub);
+            font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
+            letter-spacing: 0.5px;
+        }
+        .lang-btn.active {
+            background: var(--accent-dim);
+            color: #fff;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
+        .lang-btn:hover:not(.active) { color: var(--text-main); }
+
+        /* ── Main layout ── */
+        #main-view {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            grid-template-rows: 1fr;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Left panel ── */
+        .left-panel {
+            background: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ── Section label ── */
+        .section-label {
+            padding: 14px 18px 10px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* ── Drop zone ── */
+        .drop-zone {
+            margin: 0 14px;
+            border: 1.5px dashed var(--border-bright);
+            border-radius: var(--radius-lg);
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: var(--accent-glow2);
+            position: relative;
+            overflow: hidden;
+        }
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(135deg, var(--accent-glow), transparent, var(--cyan-glow));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .drop-zone:hover::before,
+        .drop-zone.dragover::before { opacity: 1; }
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow), inset 0 0 30px var(--accent-glow2);
+            transform: translateY(-1px);
+        }
+        .drop-zone.dragover { background: var(--accent-glow); }
+
+        .dz-icon {
+            width: 48px; height: 48px;
+            margin: 0 auto 12px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-bright);
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-        }
-        button:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); }
-        button:disabled { background: #374151; color: #9ca3af; cursor: not-allowed; transform: none; }
-        
-        button.success { background: var(--success); }
-        button.success:hover:not(:disabled) { background: #059669; }
-        
-        button.danger { background: var(--error); }
-        button.danger:hover:not(:disabled) { background: #dc2626; }
-        
-        button.secondary {
-            background: transparent;
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-        }
-        button.secondary:hover:not(:disabled) { background: var(--bg-input); }
-
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            background: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 10px 12px;
-            border-radius: var(--radius);
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        
-        input:focus { border-color: var(--accent); }
-
-        header {
-            height: 60px;
-            background: linear-gradient(180deg, var(--bg-panel) 0%, #12171c 100%);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            padding: 0 20px;
-            justify-content: space-between;
-            flex-shrink: 0;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            z-index: 20;
-        }
-        
-        .brand-area { display: flex; align-items: center; gap: 12px; }
-        .brand-area .logo svg { width: 32px; height: 32px; }
-        .header-title { font-weight: 700; color: #fff; font-size: 1.2em; letter-spacing: 0.5px; }
-
-        .mode-badge {
-            font-size: 0.75rem;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background-color: #4b5563;
-        }
-        .mode-badge a:hover {
-            text-decoration: underline;
-            opacity: 0.8;
-        }
-
-        #main-view {
-            flex: 1;
-            display: flex;
-            overflow: hidden;
-        }
-
-        .panel-header {
-            padding: 12px 15px;
-            background: rgba(0,0,0,0.2);
-            border-bottom: 1px solid var(--border-color);
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            font-weight: bold;
-            letter-spacing: 0.05em;
-            color: var(--text-dim);
-            flex-shrink: 0;
-        }
-
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
-        .form-group label { font-size: 0.9rem; color: var(--text-dim); font-weight: 500; }
-
-        .sidebar-main {
-            width: 380px;
-            background: var(--bg-panel);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            z-index: 10;
-        }
-
-        .tech-panel {
-            display: flex;
-            flex-direction: column;
-            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s;
             position: relative;
-            z-index: 100;
+            z-index: 1;
         }
-        .panel-content {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            position: relative;
-            z-index: 100;
-        }
-
-        .drop-zone {
-            border: 2px dashed var(--border-color);
-            padding: 30px 20px;
-            text-align: center;
-            cursor: pointer;
-            border-radius: var(--radius);
-            transition: all 0.25s ease;
-            background: rgba(255,255,255,0.02);
-            pointer-events: auto;
-            position: relative;
-            z-index: 100;
-        }
-        .drop-zone:hover, .drop-zone.dragover {
+        .drop-zone:hover .dz-icon {
             border-color: var(--accent);
             background: var(--accent-glow);
             box-shadow: 0 0 20px var(--accent-glow);
         }
-        .drop-zone-icon {
-            margin-bottom: 10px;
-            color: var(--text-dim);
-        }
-        .drop-zone-icon svg {
-            width: 48px;
-            height: 48px;
-        }
-        .drop-zone-text {
+        .dz-icon svg { width: 22px; height: 22px; color: var(--accent); }
+        .dz-title {
             font-size: 0.9rem;
-            color: var(--text-dim);
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 4px;
+            position: relative;
+            z-index: 1;
         }
-        .drop-zone-subtext {
+        .dz-sub {
             font-size: 0.75rem;
-            color: #6b7280;
-            margin-top: 8px;
+            color: var(--text-sub);
+            position: relative;
+            z-index: 1;
+        }
+        .dz-tag {
+            display: inline-block;
+            margin-top: 10px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            position: relative;
+            z-index: 1;
         }
 
-        .file-list-container {
+        /* ── File list ── */
+        .file-list-wrap {
             flex: 1;
             overflow-y: auto;
-            padding: 15px;
+            padding: 0 14px 10px;
         }
+        .file-list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 4px 8px;
+        }
+        .file-list-title {
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .file-count-badge {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .file-count-badge.has-files {
+            background: var(--accent-glow);
+            border-color: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        .file-empty {
+            text-align: center;
+            padding: 30px 20px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .file-empty svg { margin: 0 auto 10px; display: block; opacity: 0.3; }
 
         .file-item {
             display: flex;
             align-items: center;
             gap: 10px;
             padding: 10px 12px;
-            border-radius: 4px;
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: var(--radius);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             margin-bottom: 6px;
             transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .file-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 3px;
+            background: var(--border-bright);
+            border-radius: 2px 0 0 2px;
+            transition: background 0.2s;
         }
         .file-item:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: rgba(255,255,255,0.1);
+            border-color: var(--border-bright);
+            background: var(--bg-elevated);
+            transform: translateX(2px);
         }
-        .file-icon { 
-            display: flex; 
-            align-items: center; 
+        .file-item:hover::before { background: var(--accent); }
+        .file-item.status-success::before { background: var(--success); }
+        .file-item.status-error::before { background: var(--error); }
+
+        .file-icon-wrap {
+            width: 32px; height: 32px;
+            border-radius: var(--radius-sm);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
-        .file-icon svg {
-            width: 24px;
-            height: 24px;
-            color: var(--accent);
-        }
+        .file-icon-wrap svg { width: 16px; height: 16px; color: var(--accent); }
         .file-info { flex: 1; min-width: 0; }
         .file-name {
-            font-size: 0.85rem;
-            word-break: break-all;
+            font-size: 0.82rem;
+            font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .file-size {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            margin-top: 2px;
-        }
-        .file-status {
-            font-size: 0.8rem;
-            font-weight: 600;
+        .file-size { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+        .file-status-pill {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 10px;
             white-space: nowrap;
+            letter-spacing: 0.3px;
         }
-        .file-status.success { color: var(--success); }
-        .file-status.error { color: var(--error); }
-        .file-status.pending { color: var(--warning); }
+        .file-status-pill.pending {
+            background: rgba(251, 191, 36, 0.1);
+            color: var(--warning);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+        }
+        .file-status-pill.success {
+            background: var(--success-glow);
+            color: var(--success);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        .file-status-pill.error {
+            background: var(--error-glow);
+            color: var(--error);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+        }
         .file-remove {
+            width: 24px; height: 24px;
+            border-radius: 6px;
             background: transparent;
             border: none;
-            color: var(--text-dim);
-            padding: 4px;
+            color: var(--text-muted);
             cursor: pointer;
-            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             opacity: 0;
-            transition: opacity 0.2s;
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
         .file-item:hover .file-remove { opacity: 1; }
-        .file-remove:hover { color: var(--error); }
-
-        .workspace {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #000;
-            min-width: 0;
+        .file-remove:hover {
+            background: var(--error-glow);
+            color: var(--error);
+            transform: none !important;
         }
+        .file-remove svg { width: 12px; height: 12px; }
 
-        .log-section {
-            flex: 1;
-            background: var(--bg-panel);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-        }
-
-        #log-container {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 12px;
-        }
-        
-        .log-entry { 
-            margin-bottom: 6px; 
-            word-break: break-all; 
-            line-height: 1.4;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
-            padding-bottom: 4px;
-        }
-        .log-entry span.time { color: var(--text-dim); font-size: 0.9em; margin-right: 8px; }
-        .log-entry.success { color: var(--success); } 
-        .log-entry.error { color: var(--error); }
-        .log-entry.normal { color: #d1d5db; }
-        .log-entry.warn { color: var(--warning); }
-
-        .action-bar {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            background: var(--bg-panel);
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .button-row {
-            display: flex;
-            gap: 10px;
-        }
-        .button-row button { flex: 1; }
-
-        .file-count-info {
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            text-align: center;
-            margin-bottom: 5px;
-        }
-
-        .results-panel {
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            background: rgba(0,0,0,0.2);
+        /* ── Stats bar ── */
+        .stats-bar {
+            margin: 0 14px;
+            padding: 12px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             display: none;
+            gap: 0;
+            animation: slideUp 0.3s ease;
         }
-        .results-panel.active { display: block; }
-        
-        .result-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
+        .stats-bar.active { display: grid; grid-template-columns: repeat(3, 1fr); }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        .stat-item {
-            background: rgba(255,255,255,0.02);
-            padding: 10px;
-            border-radius: 4px;
+        .stat-cell {
             text-align: center;
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            transition: background 0.2s;
         }
-        
-        .stat-value {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--accent);
+        .stat-cell:not(:last-child) {
+            border-right: 1px solid var(--border);
         }
-        
-        .stat-label {
-            font-size: 0.7rem;
-            color: var(--text-dim);
+        .stat-cell:hover { background: var(--bg-elevated); }
+        .stat-val {
+            font-size: 1.3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+        .stat-lbl {
+            font-size: 0.62rem;
+            font-weight: 600;
+            letter-spacing: 1px;
             text-transform: uppercase;
+            color: var(--text-muted);
             margin-top: 4px;
         }
 
-        @media (max-width: 900px) {
-            #main-view { flex-direction: column; overflow-y: auto; }
-            .sidebar-main { width: 100%; border-right: none; border-bottom: 1px solid var(--border-color); height: 400px; flex-shrink: 0; }
-            .log-section { height: 300px; flex-shrink: 0; }
+        /* ── Action buttons ── */
+        .action-section {
+            padding: 12px 14px 14px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 11px 16px;
+            border-radius: var(--radius);
+            border: none;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, transparent 100%);
+            pointer-events: none;
+        }
+        .btn svg { flex-shrink: 0; transition: transform 0.2s; }
+        .btn:not(:disabled):hover svg { transform: scale(1.1); }
+        .btn:disabled { opacity: 0.38; cursor: not-allowed; }
+        .btn:not(:disabled):active { transform: scale(0.97); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-dim), #6d28d9);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+            flex: 1;
+        }
+        .btn-primary:not(:disabled):hover {
+            box-shadow: 0 6px 24px rgba(124, 58, 237, 0.55);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(5, 150, 105, 0.3);
+            flex: 1;
+        }
+        .btn-success:not(:disabled):hover {
+            box-shadow: 0 6px 24px rgba(5, 150, 105, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: var(--bg-elevated);
+            color: var(--text-sub);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:not(:disabled):hover {
+            background: var(--error-glow);
+            color: var(--error);
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .btn-row { display: flex; gap: 8px; }
+
+        /* ── Right workspace ── */
+        .workspace {
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-base);
+            overflow: hidden;
+        }
+
+        /* ── Log header ── */
+        .log-header {
+            height: 46px;
+            padding: 0 20px;
+            background: rgba(14, 20, 32, 0.6);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .log-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .log-dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: all 0.3s;
+        }
+        .log-dot.live {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s ease infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .status-chip {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            transition: all 0.3s;
+        }
+        .status-chip.processing {
+            border-color: var(--accent-dim);
+            color: var(--accent);
+            background: var(--accent-glow);
+        }
+        .status-chip.done {
+            border-color: rgba(52, 211, 153, 0.3);
+            color: var(--success);
+            background: var(--success-glow);
+        }
+        .status-chip.error {
+            border-color: rgba(248, 113, 113, 0.3);
+            color: var(--error);
+            background: var(--error-glow);
+        }
+
+        /* ── Log container ── */
+        #log-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 20px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
+            font-size: 12.5px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            padding: 3px 8px;
+            border-radius: var(--radius-sm);
+            margin-bottom: 2px;
+            transition: background 0.15s;
+        }
+        .log-entry:hover { background: rgba(255,255,255,0.03); }
+        .log-time {
+            color: var(--text-muted);
+            font-size: 0.75em;
+            flex-shrink: 0;
+            margin-top: 1px;
+            user-select: none;
+        }
+        .log-msg { word-break: break-all; }
+        .log-entry.normal .log-msg { color: var(--text-sub); }
+        .log-entry.success .log-msg { color: var(--success); }
+        .log-entry.error .log-msg { color: var(--error); }
+        .log-entry.warn .log-msg { color: var(--warning); }
+        .log-entry.divider .log-msg {
+            color: var(--accent);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* ── Progress bar ── */
+        .progress-wrap {
+            height: 3px;
+            background: var(--border);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent-dim), var(--cyan));
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px var(--accent-glow);
+        }
+        .progress-bar.indeterminate {
+            width: 40%;
+            animation: indeterminate 1.5s ease infinite;
+        }
+        @keyframes indeterminate {
+            0% { transform: translateX(-150%); }
+            100% { transform: translateX(350%); }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 860px) {
+            #main-view { grid-template-columns: 1fr; grid-template-rows: auto 1fr; overflow-y: auto; }
+            .left-panel { max-height: 420px; border-right: none; border-bottom: 1px solid var(--border); }
         }
     </style>
 </head>
 <body>
-    
+
     <header>
-        <div class="brand-area">
-            <div class="logo">
+        <div class="brand">
+            <div class="brand-logo">
                 <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#8b5cf6"/>
+                        <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#a78bfa"/>
                             <stop offset="100%" style="stop-color:#6d28d9"/>
                         </linearGradient>
                     </defs>
-                    <rect x="4" y="4" width="56" height="56" rx="10" fill="url(#shieldGrad)"/>
-                    <path d="M32 14 L50 26 L50 42 C50 48 44 52 32 54 C20 52 14 48 14 42 L14 26 Z" fill="#e0e7ff" opacity="0.9"/>
-                    <path d="M32 14 L32 54" stroke="#4c1d95" stroke-width="1.5"/>
-                    <path d="M14 26 L50 26" stroke="#4c1d95" stroke-width="1.5"/>
-                    <rect x="24" y="30" width="16" height="4" rx="1" fill="#8b5cf6"/>
-                    <rect x="24" y="38" width="16" height="4" rx="1" fill="#8b5cf6"/>
-                    <rect x="24" y="46" width="16" height="4" rx="1" fill="#8b5cf6"/>
+                    <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#sg)"/>
+                    <path d="M32 13 L51 25 L51 43 C51 50 44 54 32 56 C20 54 13 50 13 43 L13 25 Z" fill="#e0e7ff" opacity="0.92"/>
+                    <path d="M32 13 L32 56" stroke="#4c1d95" stroke-width="1.5" opacity="0.5"/>
+                    <path d="M13 25 L51 25" stroke="#4c1d95" stroke-width="1.5" opacity="0.5"/>
+                    <rect x="23" y="30" width="18" height="4" rx="2" fill="#a78bfa"/>
+                    <rect x="23" y="38" width="18" height="4" rx="2" fill="#a78bfa"/>
+                    <rect x="23" y="46" width="18" height="4" rx="2" fill="#a78bfa" opacity="0.6"/>
                 </svg>
             </div>
-            <div class="header-title">Parser Armor</div>
-            <div class="mode-badge"><a href="https://optifine.net/home" target="_blank" style="color: inherit; text-decoration: none;">OptiFine</a> → <a href="https://modrinth.com/mod/rpt" target="_blank" style="color: inherit; text-decoration: none;">RPT</a></div>
+            <div class="brand-title">Parser Armor</div>
+            <div class="brand-badge">
+                <a href="https://optifine.net/home" target="_blank">OptiFine</a>
+                <span class="badge-arrow">→</span>
+                <a href="https://modrinth.com/mod/rpt" target="_blank">RPT</a>
+            </div>
         </div>
-        <div style="color: var(--text-dim); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
-            <span data-i18n="subtitle">Armor Converter</span>
-            <select class="lang-select" id="langSelect">
-                <option value="en">EN</option>
-                <option value="ru">RU</option>
-            </select>
+
+        <div class="header-right">
+            <div class="lang-toggle">
+                <button class="lang-btn active" data-lang="en">EN</button>
+                <button class="lang-btn" data-lang="ru">RU</button>
+            </div>
         </div>
     </header>
 
     <main id="main-view">
-        <aside class="sidebar-main">
-            <div class="tech-panel">
-                <div class="panel-header">1. <span data-i18n="selectArchives">SELECT ARCHIVES</span></div>
-                <div class="panel-content">
-                    <div class="drop-zone" id="dropZone">
-                        <div class="drop-zone-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
-                            </svg>
-                        </div>
-                        <div class="drop-zone-text" data-i18n="dropHere">Drop ZIP archives here</div>
-                        <div class="drop-zone-subtext" data-i18n="orClick">or click to select files</div>
-                        <input type="file" id="fileInput" multiple accept=".zip" style="display: none;">
-                    </div>
-                    <div style="font-size: 0.75rem; color: var(--text-dim); text-align: center;" data-i18n="supportedFormat">
-                        Supported: .zip
+
+        <!-- ── LEFT PANEL ── -->
+        <div class="left-panel">
+
+            <div class="section-label" data-i18n="selectArchives">Select Archives</div>
+
+            <div class="drop-zone" id="dropZone">
+                <div class="dz-icon">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                            d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                    </svg>
+                </div>
+                <div class="dz-title" data-i18n="dropHere">Drop ZIP archives here</div>
+                <div class="dz-sub" data-i18n="orClick">or click to select files</div>
+                <span class="dz-tag">.ZIP</span>
+                <input type="file" id="fileInput" multiple accept=".zip" style="display:none">
+            </div>
+
+            <div class="file-list-wrap">
+                <div class="file-list-header">
+                    <span class="file-list-title" data-i18n="files">Files</span>
+                    <span class="file-count-badge" id="fileCountBadge">0</span>
+                </div>
+                <div id="fileList">
+                    <div class="file-empty">
+                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span data-i18n="noFiles">No files selected</span>
                     </div>
                 </div>
             </div>
 
-            <div class="tech-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span data-i18n="files">2. FILES</span>
-                    <span id="fileCountText" style="font-size: 0.85rem; font-weight: normal; color: var(--text-dim); text-transform: none;">0 <span data-i18n="filesLower">files</span></span>
+            <div class="stats-bar" id="resultsPanel">
+                <div class="stat-cell">
+                    <div class="stat-val" id="statLayer1">0</div>
+                    <div class="stat-lbl" data-i18n="layer1">Layer 1</div>
                 </div>
-                <div class="file-list-container" id="fileList">
-                    <div style="text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 0.9rem;" data-i18n="noFiles">
-                        No files selected
-                    </div>
+                <div class="stat-cell">
+                    <div class="stat-val" id="statLayer2">0</div>
+                    <div class="stat-lbl" data-i18n="layer2">Layer 2</div>
+                </div>
+                <div class="stat-cell">
+                    <div class="stat-val" id="statTextures">0</div>
+                    <div class="stat-lbl" data-i18n="textures">Textures</div>
                 </div>
             </div>
 
-            <div class="results-panel" id="resultsPanel">
-                <div class="result-stats">
-                    <div class="stat-item">
-                        <div class="stat-value" id="statLayer1">0</div>
-                        <div class="stat-label" data-i18n="layer1">Layer 1</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statLayer2">0</div>
-                        <div class="stat-label" data-i18n="layer2">Layer 2</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="statTextures">0</div>
-                        <div class="stat-label" data-i18n="textures">Textures</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="action-bar">
-                <div class="file-count-info" id="fileCountInfo"><span data-i18n="selected">Selected</span>: 0 <span data-i18n="filesLower">files</span></div>
-                <div class="button-row">
-                    <button id="convertBtn" disabled class="success">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            <div class="action-section">
+                <div class="btn-row">
+                    <button id="convertBtn" class="btn btn-primary" disabled>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
                         <span data-i18n="convert">Convert</span>
                     </button>
-                </div>
-                <div class="button-row">
-                    <button id="downloadBtn" disabled class="secondary">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    <button id="downloadBtn" class="btn btn-success" disabled>
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
                         <span data-i18n="download">Download</span>
                     </button>
-                    <button id="clearBtn" class="danger">
-                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        <span data-i18n="clear">Clear</span>
-                    </button>
                 </div>
+                <button id="clearBtn" class="btn btn-ghost">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                    <span data-i18n="clear">Clear all</span>
+                </button>
             </div>
-        </aside>
 
+        </div>
+
+        <!-- ── WORKSPACE ── -->
         <section class="workspace">
-            <div class="log-section">
-                <div class="panel-header" style="background: transparent; display: flex; justify-content: space-between; align-items: center;">
-                    <span data-i18n="processLogs">Process Logs</span>
-                    <span id="status-text" style="font-size: 0.85rem; font-weight: normal; color: var(--text-dim); text-transform: none;" data-i18n="ready">Ready</span>
-                </div>
-                <div id="log-container">
-                    <div class="log-entry normal"><span class="time"></span><span data-i18n="systemReady">System ready. Drop archives to start...</span></div>
-                </div>
+            <div class="progress-wrap">
+                <div class="progress-bar" id="progressBar"></div>
             </div>
+            <div class="log-header">
+                <span class="log-title">
+                    <span class="log-dot" id="logDot"></span>
+                    <span data-i18n="processLogs">Process Logs</span>
+                </span>
+                <span class="status-chip" id="statusChip">
+                    <span data-i18n="ready">Ready</span>
+                </span>
+            </div>
+            <div id="log-container"></div>
         </section>
+
     </main>
 
     <script>
-        const translations = {
-            en: {
-                subtitle: "Armor Converter",
-                selectArchives: "SELECT ARCHIVES",
-                dropHere: "Drop ZIP archives here",
-                orClick: "or click to select files",
-                supportedFormat: "Supported: .zip",
-                files: "2. FILES",
-                filesLower: "files",
-                noFiles: "No files selected",
-                selected: "Selected",
-                convert: "Convert",
-                download: "Download",
-                clear: "Clear",
-                processLogs: "Process Logs",
-                ready: "Ready",
-                systemReady: "System ready. Drop archives to start...",
-                layer1: "Layer 1",
-                layer2: "Layer 2",
-                textures: "Textures",
-                pending: "Pending",
-                error: "Error",
-                readyToConvert: "Ready to convert",
-                conversionComplete: "Conversion complete"
-            },
-            ru: {
-                subtitle: "Конвертер брони",
-                selectArchives: "ВЫБОР АРХИВОВ",
-                dropHere: "Перетащите ZIP архивы сюда",
-                orClick: "или нажмите для выбора",
-                supportedFormat: "Поддерживается: .zip",
-                files: "2. ФАЙЛЫ",
-                filesLower: "файлов",
-                noFiles: "Файлы не выбраны",
-                selected: "Выбрано",
-                convert: "Конвертировать",
-                download: "Скачать",
-                clear: "Очистить",
-                processLogs: "Журнал процессов",
-                ready: "Готов",
-                systemReady: "Система готова. Перетащите архивы для начала...",
-                layer1: "Слой 1",
-                layer2: "Слой 2",
-                textures: "Текстуры",
-                pending: "Ожидание",
-                error: "Ошибка",
-                readyToConvert: "Готов к конвертации",
-                conversionComplete: "Конвертация завершена"
-            }
-        };
-
-        let currentLang = localStorage.getItem('lang') || 'en';
-
-        function t(key) {
-            return translations[currentLang][key] || translations.en[key] || key;
+    // ── i18n ──────────────────────────────────────────────────
+    const translations = {
+        en: {
+            selectArchives: "Select Archives",
+            dropHere:       "Drop ZIP archives here",
+            orClick:        "or click to select files",
+            files:          "Files",
+            noFiles:        "No files selected",
+            convert:        "Convert",
+            download:       "Download",
+            clear:          "Clear all",
+            processLogs:    "Process Logs",
+            ready:          "Ready",
+            systemReady:    "System ready. Drop archives to start...",
+            layer1:         "Layer 1",
+            layer2:         "Layer 2",
+            textures:       "Textures",
+            pending:        "Pending",
+            error:          "Error",
+            readyToConvert: "Ready to convert",
+            conversionComplete: "Complete",
+            processing:     "Processing...",
+            fileAdded:      "files added",
+            cleared:        "Cleared"
+        },
+        ru: {
+            selectArchives: "Выбор архивов",
+            dropHere:       "Перетащите ZIP архивы сюда",
+            orClick:        "или нажмите для выбора",
+            files:          "Файлы",
+            noFiles:        "Файлы не выбраны",
+            convert:        "Конвертировать",
+            download:       "Скачать",
+            clear:          "Очистить всё",
+            processLogs:    "Журнал процессов",
+            ready:          "Готов",
+            systemReady:    "Система готова. Перетащите архивы...",
+            layer1:         "Слой 1",
+            layer2:         "Слой 2",
+            textures:       "Текстуры",
+            pending:        "Ожидание",
+            error:          "Ошибка",
+            readyToConvert: "Готов к конвертации",
+            conversionComplete: "Завершено",
+            processing:     "Обработка...",
+            fileAdded:      "файлов добавлено",
+            cleared:        "Очищено"
         }
+    };
 
-        function updateTranslations() {
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (el.tagName === 'INPUT') return;
-                el.textContent = t(key);
-            });
-            document.getElementById('langSelect').value = currentLang;
-            localStorage.setItem('lang', currentLang);
-        }
+    let currentLang = localStorage.getItem('lang') || 'en';
 
-        document.getElementById('langSelect').addEventListener('change', (e) => {
-            currentLang = e.target.value;
-            updateTranslations();
-            renderFileList();
+    function t(key) {
+        return (translations[currentLang] || translations.en)[key] || translations.en[key] || key;
+    }
+
+    function applyLang() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (el.tagName !== 'INPUT') el.textContent = t(key);
         });
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === currentLang);
+        });
+        localStorage.setItem('lang', currentLang);
+    }
 
-        updateTranslations();
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            currentLang = btn.dataset.lang;
+            applyLang();
+            renderFileList();
+            setStatus(t('ready'), 'idle');
+        });
+    });
 
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        const fileCountText = document.getElementById('fileCountText');
-        const fileCountInfo = document.getElementById('fileCountInfo');
-        const convertBtn = document.getElementById('convertBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const logContainer = document.getElementById('log-container');
-        const statusText = document.getElementById('status-text');
-        const resultsPanel = document.getElementById('resultsPanel');
-        
-        let files = [];
-        let convertedBlob = null;
-        
-        const VALID_ARMOR_ITEMS = new Set([
-            "leather_helmet", "leather_chestplate", "leather_leggings", "leather_boots",
-            "golden_helmet", "golden_chestplate", "golden_leggings", "golden_boots",
-            "iron_helmet", "iron_chestplate", "iron_leggings", "iron_boots",
-            "diamond_helmet", "diamond_chestplate", "diamond_leggings", "diamond_boots",
-            "netherite_helmet", "netherite_chestplate", "netherite_leggings", "netherite_boots",
-            "chainmail_helmet", "chainmail_chestplate", "chainmail_leggings", "chainmail_boots",
-            "turtle_helmet"
-        ]);
+    applyLang();
 
-        const MATERIALS = ["leather", "golden", "iron", "diamond", "netherite", "chainmail", "copper"];
-        const LAYER1_ITEMS = new Set(["helmet", "chestplate", "boots"]);
-        const LAYER2_ITEMS = new Set(["leggings", "pants"]);
-        
-        function addLog(message, type = 'normal') {
-            const time = new Date().toLocaleTimeString();
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.innerHTML = `<span class="time">[${time}]</span> ${message}`;
-            logContainer.appendChild(entry);
-            logContainer.scrollTop = logContainer.scrollHeight;
-        }
-        
-        function clearLog() {
-            logContainer.innerHTML = '';
-        }
-        
-        function setStatus(text) {
-            statusText.textContent = text;
-        }
-        
-        function parseProperties(content) {
-            const props = {};
-            const lines = content.split('\n');
-            for (let line of lines) {
-                line = line.trim();
-                if (!line || line.startsWith('#') || line.startsWith('!')) continue;
-                const idx = line.indexOf('=');
-                if (idx === -1) continue;
-                const key = line.substring(0, idx).trim();
-                const value = line.substring(idx + 1).trim();
-                props[key] = value;
-            }
-            return props;
-        }
+    // ── DOM refs ─────────────────────────────────────────────
+    const dropZone    = document.getElementById('dropZone');
+    const fileInput   = document.getElementById('fileInput');
+    const fileList    = document.getElementById('fileList');
+    const fileCountBadge = document.getElementById('fileCountBadge');
+    const convertBtn  = document.getElementById('convertBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const clearBtn    = document.getElementById('clearBtn');
+    const logContainer = document.getElementById('log-container');
+    const resultsPanel = document.getElementById('resultsPanel');
+    const progressBar = document.getElementById('progressBar');
+    const statusChip  = document.getElementById('statusChip');
+    const logDot      = document.getElementById('logDot');
 
-        function convertUnicode(text) {
-            try {
-                return text.replace(/\\u[0-9a-fA-F]{4}/g, (match) => {
-                    return String.fromCharCode(parseInt(match.replace('\\u', ''), 16));
-                });
-            } catch {
-                return text;
-            }
-        }
+    // ── State ─────────────────────────────────────────────────
+    let files = [];
+    let convertedBlob = null;
 
-        function getNamesFromDisplay(nameStr) {
-            if (!nameStr) return [];
-            nameStr = convertUnicode(nameStr);
-            const match = nameStr.match(/iregex:\(([^)]+)\)/);
-            if (match) {
-                const inner = match[1];
-                if (inner.includes('|')) {
-                    return inner.split('|').map(n => n.trim());
+    // ── Constants ─────────────────────────────────────────────
+    const VALID_ARMOR_ITEMS = new Set([
+        "leather_helmet","leather_chestplate","leather_leggings","leather_boots",
+        "golden_helmet","golden_chestplate","golden_leggings","golden_boots",
+        "iron_helmet","iron_chestplate","iron_leggings","iron_boots",
+        "diamond_helmet","diamond_chestplate","diamond_leggings","diamond_boots",
+        "netherite_helmet","netherite_chestplate","netherite_leggings","netherite_boots",
+        "chainmail_helmet","chainmail_chestplate","chainmail_leggings","chainmail_boots",
+        "turtle_helmet"
+    ]);
+    const MATERIALS    = ["leather","golden","iron","diamond","netherite","chainmail","copper"];
+    const LAYER1_ITEMS = new Set(["helmet","chestplate","boots"]);
+    const LAYER2_ITEMS = new Set(["leggings","pants"]);
+
+    // ── Logging ───────────────────────────────────────────────
+    function addLog(message, type = 'normal') {
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.innerHTML = `<span class="log-time">[${time}]</span><span class="log-msg">${message}</span>`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLog() { logContainer.innerHTML = ''; }
+
+    // ── Status chip ───────────────────────────────────────────
+    function setStatus(text, state = 'idle') {
+        statusChip.textContent = text;
+        statusChip.className = 'status-chip';
+        if (state === 'processing') {
+            statusChip.classList.add('processing');
+            logDot.classList.add('live');
+        } else if (state === 'done') {
+            statusChip.classList.add('done');
+            logDot.classList.remove('live');
+        } else if (state === 'error') {
+            statusChip.classList.add('error');
+            logDot.classList.remove('live');
+        } else {
+            logDot.classList.remove('live');
+        }
+    }
+
+    // ── Progress ──────────────────────────────────────────────
+    function setProgress(val) {
+        progressBar.classList.remove('indeterminate');
+        progressBar.style.width = val + '%';
+    }
+    function setIndeterminate() {
+        progressBar.classList.add('indeterminate');
+        progressBar.style.width = '';
+    }
+    function resetProgress() {
+        progressBar.classList.remove('indeterminate');
+        progressBar.style.width = '0%';
+    }
+
+    // ── Parsing helpers ───────────────────────────────────────
+    function parseProperties(content) {
+        const props = {};
+        for (let line of content.split('\n')) {
+            line = line.trim();
+            if (!line || line[0] === '#' || line[0] === '!') continue;
+            const idx = line.indexOf('=');
+            if (idx === -1) continue;
+            props[line.substring(0, idx).trim()] = line.substring(idx + 1).trim();
+        }
+        return props;
+    }
+
+    function convertUnicode(text) {
+        return text.replace(/\\u[0-9a-fA-F]{4}/g,
+            m => String.fromCharCode(parseInt(m.slice(2), 16)));
+    }
+
+    function getNamesFromDisplay(nameStr) {
+        if (!nameStr) return [];
+        nameStr = convertUnicode(nameStr);
+        const match = nameStr.match(/iregex:\(([^)]+)\)/);
+        if (match) {
+            const inner = match[1];
+            return inner.includes('|') ? inner.split('|').map(n => n.trim()) : [inner.trim()];
+        }
+        if (nameStr.includes('|')) return nameStr.split('|').map(n => n.trim());
+        return [nameStr];
+    }
+
+    function processFile(props) {
+        const armorType  = props.type || "";
+        const matchItems = props.matchItems || props.Items || props.Item || "";
+        if (armorType !== "armor" && armorType !== "item" && armorType !== "elytra") return null;
+        if ((armorType === "item" || armorType === "elytra") && !matchItems) return null;
+        if (armorType === "item" || armorType === "elytra") {
+            if (!matchItems.split(' ').some(i => VALID_ARMOR_ITEMS.has(i))) return null;
+        }
+        const names = getNamesFromDisplay(props["nbt.display.Name"] || "");
+        if (!names.length) return null;
+        const itemsList = matchItems.split(' ');
+        const result = { layer1: [], layer2: [] };
+        for (const material of MATERIALS) {
+            const hasL1 = itemsList.some(i => [...LAYER1_ITEMS].some(t => i.includes(t)));
+            const hasL2 = itemsList.some(i => [...LAYER2_ITEMS].some(t => i.includes(t)));
+            const tx1 = props[`texture.${material}_layer_1`];
+            const tx2 = props[`texture.${material}_layer_2`];
+            if (tx1 && hasL1) result.layer1.push({ material, texture: tx1, names });
+            if (tx2 && hasL2) result.layer2.push({ material, texture: tx2, names });
+        }
+        return result;
+    }
+
+    // ── Core conversion ───────────────────────────────────────
+    async function processZip(file) {
+        addLog(`Processing: ${file.name}`, 'normal');
+        setStatus(t('processing'), 'processing');
+        setIndeterminate();
+
+        try {
+            const zip = await JSZip.loadAsync(file);
+
+            let totalFiles = 0;
+            zip.forEach((p, e) => { if (!e.dir) totalFiles++; });
+            addLog(`Total files in archive: ${totalFiles}`, 'normal');
+
+            const propFiles = [];
+            zip.forEach((p, e) => {
+                if (!e.dir && p.includes('optifine/cit/') && p.endsWith('.properties') && !p.includes('_icon.properties'))
+                    propFiles.push({ path: p, entry: e });
+            });
+            addLog(`Found ${propFiles.length} .properties files`, 'normal');
+
+            const convertedL1 = {}, convertedL2 = {};
+            const usedTextures = new Set();
+            const allTextures  = new Map();
+
+            zip.forEach((p, e) => {
+                if (!e.dir && p.endsWith('.png')) {
+                    const name = p.split('/').pop().replace('.png', '');
+                    if (!allTextures.has(name)) allTextures.set(name, p);
                 }
-                return [inner.trim()];
-            }
-            if (nameStr.includes('|')) {
-                return nameStr.split('|').map(n => n.trim());
-            }
-            return [nameStr];
-        }
+            });
 
-        function processFile(props) {
-            const armorType = props.type || props["type"] || "";
-            const matchItems = props.matchItems || props.Items || props.Item || "";
-            
-            if (armorType !== "armor" && armorType !== "item" && armorType !== "elytra") {
-                return null;
-            }
-            
-            if (armorType === "item" || armorType === "elytra") {
-                if (!matchItems) return null;
-                const itemsList = matchItems.split(' ').filter(item => VALID_ARMOR_ITEMS.has(item));
-                if (itemsList.length === 0) return null;
-            }
-            
-            const names = getNamesFromDisplay(props["nbt.display.Name"] || props["nbt.display.Name"] || "");
-            if (names.length === 0) return null;
-            
-            const itemsList = matchItems.split(' ');
-            
-            const result = { layer1: [], layer2: [] };
-            
-            for (const material of MATERIALS) {
-                const layer1Key = `texture.${material}_layer_1`;
-                const layer2Key = `texture.${material}_layer_2`;
-                
-                const actualHasLayer1 = itemsList.some(item => {
-                    for (const t of LAYER1_ITEMS) {
-                        if (item.includes(t)) return true;
-                    }
-                    return false;
-                });
-                
-                const actualHasLayer2 = itemsList.some(item => {
-                    for (const t of LAYER2_ITEMS) {
-                        if (item.includes(t)) return true;
-                    }
-                    return false;
-                });
-                
-                const textureLayer1 = props[layer1Key];
-                const textureLayer2 = props[layer2Key];
-                
-                if (textureLayer1 && actualHasLayer1) {
-                    result.layer1.push({
-                        material,
-                        texture: textureLayer1,
-                        names: names
-                    });
-                }
-                
-                if (textureLayer2 && actualHasLayer2) {
-                    result.layer2.push({
-                        material,
-                        texture: textureLayer2,
-                        names: names
-                    });
-                }
-            }
-            
-            return result;
-        }
-        
-        async function processZip(file) {
-            addLog(`Processing: ${file.name}`, 'normal');
-            setStatus(`Processing: ${file.name}`);
-            
-            try {
-                const zip = await JSZip.loadAsync(file);
-                
-                const propertiesFiles = [];
-                let totalFiles = 0;
-                
-                zip.forEach((relativePath, zipEntry) => {
-                    if (!zipEntry.dir) totalFiles++;
-                });
-                
-                addLog(`Total files in archive: ${totalFiles}`, 'normal');
-                
-                zip.forEach((relativePath, zipEntry) => {
-                    if (zipEntry.dir) return;
-                    
-                    if (relativePath.includes('optifine/cit/') && 
-                        relativePath.endsWith('.properties') &&
-                        !relativePath.includes('_icon.properties')) {
-                        propertiesFiles.push({ path: relativePath, entry: zipEntry });
-                    }
-                });
-                
-                addLog(`Found ${propertiesFiles.length} .properties files`, 'normal');
-                
-                const convertedLayer1 = {};
-                const convertedLayer2 = {};
-                const usedTextures = new Set();
-                const allTexturesInZip = new Map();
-                
-                zip.forEach((relativePath, zipEntry) => {
-                    if (zipEntry.dir) return;
-                    if (relativePath.endsWith('.png')) {
-                        const fileName = relativePath.split('/').pop().replace('.png', '');
-                        if (!allTexturesInZip.has(fileName)) {
-                            allTexturesInZip.set(fileName, relativePath);
-                        }
-                    }
-                });
-                
-                const totalProps = propertiesFiles.length;
-                
-                for (let i = 0; i < propertiesFiles.length; i++) {
-                    const { path, entry } = propertiesFiles[i];
-                    const content = await entry.async('string');
-                    const props = parseProperties(content);
-                    const processed = processFile(props);
-                    
-                    if (processed) {
-                        for (const item of processed.layer1) {
-                            if (!convertedLayer1[item.material]) {
-                                convertedLayer1[item.material] = [];
-                            }
-                            
-                            const caseObj = {
-                                when: item.names,
-                                child: { type: "rpt:apply", value: `textures/parse_armor/${item.texture}.png` }
-                            };
-                            
-                            const exists = convertedLayer1[item.material].some(c => 
-                                c.child.value === caseObj.child.value &&
-                                JSON.stringify(c.when) === JSON.stringify(caseObj.when)
-                            );
-                            
-                            if (!exists) {
-                                convertedLayer1[item.material].push(caseObj);
-                            }
-                            usedTextures.add(item.texture);
-                        }
-                        
-                        for (const item of processed.layer2) {
-                            if (!convertedLayer2[item.material]) {
-                                convertedLayer2[item.material] = [];
-                            }
-                            
-                            const caseObj = {
-                                when: item.names,
-                                child: { type: "rpt:apply", value: `textures/parse_armor/${item.texture}.png` }
-                            };
-                            
-                            const exists = convertedLayer2[item.material].some(c => 
-                                c.child.value === caseObj.child.value &&
-                                JSON.stringify(c.when) === JSON.stringify(caseObj.when)
-                            );
-                            
-                            if (!exists) {
-                                convertedLayer2[item.material].push(caseObj);
-                            }
-                            usedTextures.add(item.texture);
-                        }
-                    }
-                    
-                    if ((i + 1) % 20 === 0 || (i + 1) === totalProps) {
-                        setStatus(`Processing ${i + 1}/${totalProps}...`);
-                    }
-                }
-                
-                addLog(`Converting ${Object.keys(convertedLayer1).length} layer 1 items...`, 'normal');
-                
-                for (const [material, cases] of Object.entries(convertedLayer1)) {
-                    const output = {
-                        type: "rpt:component",
-                        component: "custom_name",
-                        cases: cases
+            for (let i = 0; i < propFiles.length; i++) {
+                const content   = await propFiles[i].entry.async('string');
+                const processed = processFile(parseProperties(content));
+
+                if (processed) {
+                    const pushCase = (store, item) => {
+                        if (!store[item.material]) store[item.material] = [];
+                        const co = { when: item.names, child: { type: "rpt:apply", value: `textures/parse_armor/${item.texture}.png` } };
+                        if (!store[item.material].some(c => c.child.value === co.child.value && JSON.stringify(c.when) === JSON.stringify(co.when)))
+                            store[item.material].push(co);
+                        usedTextures.add(item.texture);
                     };
-                    zip.file(`assets/minecraft/rpt/swappers/textures/entity/equipment/humanoid/${material}.json`, JSON.stringify(output, null, 4));
+                    processed.layer1.forEach(item => pushCase(convertedL1, item));
+                    processed.layer2.forEach(item => pushCase(convertedL2, item));
                 }
-                
-                for (const [material, cases] of Object.entries(convertedLayer2)) {
-                    const output = {
-                        type: "rpt:component",
-                        component: "custom_name",
-                        cases: cases
-                    };
-                    zip.file(`assets/minecraft/rpt/swappers/textures/entity/equipment/humanoid_leggings/${material}.json`, JSON.stringify(output, null, 4));
-                }
-                
-                addLog(`Copying ${usedTextures.size} textures...`, 'normal');
-                
-                for (const textureName of usedTextures) {
-                    const texturePath = allTexturesInZip.get(textureName);
-                    if (texturePath) {
-                        const textureData = await zip.file(texturePath).async('blob');
-                        zip.file(`assets/minecraft/textures/parse_armor/${textureName}.png`, textureData);
-                    }
-                    
-                    const iconPath = allTexturesInZip.get(`${textureName}_icon`);
-                    if (iconPath) {
-                        const iconData = await zip.file(iconPath).async('blob');
-                        zip.file(`assets/minecraft/textures/parse_armor/${textureName}_icon.png`, iconData);
-                    }
-                }
-                
-                convertedBlob = await zip.generateAsync({ type: "blob" });
-                
-                document.getElementById('statLayer1').textContent = Object.keys(convertedLayer1).length;
-                document.getElementById('statLayer2').textContent = Object.keys(convertedLayer2).length;
-                document.getElementById('statTextures').textContent = usedTextures.size;
-                resultsPanel.classList.add('active');
-                
-                updateFileStatus(file.name, 'success', `${Object.keys(convertedLayer1).length + Object.keys(convertedLayer2).length} items`);
-                addLog(`Done: ${file.name} converted successfully`, 'success');
-                
-            } catch (e) {
-                addLog(`! Error processing ${file.name}: ${e.message}`, 'error');
-                updateFileStatus(file.name, 'error', 'Error');
-                setStatus(`Error: ${file.name}`);
-            }
-            
-            updateButtons();
-        }
-        
-        function updateFileStatus(fileName, status, statusText) {
-            const item = document.querySelector(`[data-file="${fileName}"]`);
-            if (item) {
-                const statusSpan = item.querySelector('.file-status');
-                statusSpan.className = `file-status ${status}`;
-                if (status === 'success') {
-                    statusSpan.textContent = statusText;
-                } else if (status === 'error') {
-                    statusSpan.textContent = t('error');
-                } else {
-                    statusSpan.textContent = t('pending');
-                }
-            }
-        }
-        
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-        }
-        
-        function renderFileList() {
-            fileCountText.innerHTML = `${files.length} <span data-i18n="filesLower">${t('filesLower')}</span>`;
-            fileCountInfo.innerHTML = `<span data-i18n="selected">${t('selected')}</span>: ${files.length} <span data-i18n="filesLower">${t('filesLower')}</span>`;
-            
-            if (files.length === 0) {
-                fileList.innerHTML = `
-                    <div style="text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 0.9rem;">
-                        ${t('noFiles')}
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            files.forEach(file => {
-                html += `
-                    <div class="file-item" data-file="${file.name}">
-                        <span class="file-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </span>
-                        <div class="file-info">
-                            <div class="file-name">${file.name}</div>
-                            <div class="file-size">${formatFileSize(file.size)}</div>
-                        </div>
-                        <span class="file-status pending">Pending</span>
-                        <button class="file-remove" onclick="removeFile('${file.name}')" title="Remove">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                            </svg>
-                        </button>
-                    </div>
-                `;
-            });
-            
-            fileList.innerHTML = html;
-        }
-        
-        function removeFile(fileName) {
-            files = files.filter(f => f.name !== fileName);
-            renderFileList();
-            updateButtons();
-        }
-        
-        function updateButtons() {
-            const hasFiles = files.length > 0;
-            
-            convertBtn.disabled = !hasFiles;
-            downloadBtn.disabled = !convertedBlob;
-            
-            if (hasFiles) {
-                setStatus(t('readyToConvert') || 'Ready to convert');
-            } else if (convertedBlob) {
-                setStatus(t('conversionComplete') || 'Conversion complete');
-            } else {
-                setStatus(t('ready') || 'Ready');
-            }
-        }
-        
-        dropZone.addEventListener('click', () => fileInput.click());
-        
-        dropZone.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropZone.classList.add('dragover');
-        });
-        
-        dropZone.addEventListener('dragleave', () => {
-            dropZone.classList.remove('dragover');
-        });
-        
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('dragover');
-            const droppedFiles = Array.from(e.dataTransfer.files)
-                .filter(f => f.name.endsWith('.zip'));
-            
-            droppedFiles.forEach(file => {
-                if (!files.some(f => f.name === file.name)) {
-                    files.push(file);
-                }
-            });
-            
-            renderFileList();
-            updateButtons();
-            addLog(`Added files: ${droppedFiles.length}`, 'normal');
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            const selectedFiles = Array.from(e.target.files);
-            selectedFiles.forEach(file => {
-                if (!files.some(f => f.name === file.name)) {
-                    files.push(file);
-                }
-            });
-            renderFileList();
-            updateButtons();
-            addLog(`Added files: ${selectedFiles.length}`, 'normal');
-        });
-        
-        convertBtn.addEventListener('click', async () => {
-            addLog('=== CONVERSION STARTED ===', 'normal');
-            convertedBlob = null;
-            resultsPanel.classList.remove('active');
-            
-            for (const file of files) {
-                await processZip(file);
-            }
-            
-            addLog('=== CONVERSION COMPLETE ===', 'success');
-            setStatus('Conversion complete');
-            renderFileList();
-        });
-        
-        downloadBtn.addEventListener('click', () => {
-            if (convertedBlob) {
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(convertedBlob);
-                link.download = files.length > 0 ? files[0].name.replace('.zip', '_parsearmor.zip') : 'parsearmor_result.zip';
-                link.click();
-                URL.revokeObjectURL(link.href);
-                addLog('File downloaded', 'success');
-            }
-        });
-        
-        clearBtn.addEventListener('click', () => {
-            files = [];
-            convertedBlob = null;
-            resultsPanel.classList.remove('active');
-            renderFileList();
-            updateButtons();
-            clearLog();
-            addLog('List cleared', 'normal');
-            setStatus('Ready');
-        });
 
-        window.removeFile = removeFile;
+                if ((i + 1) % 20 === 0 || i + 1 === propFiles.length) {
+                    setProgress(Math.round(((i + 1) / propFiles.length) * 80));
+                    setStatus(`${i + 1}/${propFiles.length}`, 'processing');
+                }
+            }
+
+            addLog(`Converting ${Object.keys(convertedL1).length} layer 1 items...`, 'normal');
+
+            const writeJSON = (store, dir) => {
+                for (const [mat, cases] of Object.entries(store))
+                    zip.file(`assets/minecraft/rpt/swappers/textures/entity/equipment/${dir}/${mat}.json`,
+                        JSON.stringify({ type: "rpt:component", component: "custom_name", cases }, null, 4));
+            };
+            writeJSON(convertedL1, 'humanoid');
+            writeJSON(convertedL2, 'humanoid_leggings');
+
+            addLog(`Copying ${usedTextures.size} textures...`, 'normal');
+            setProgress(90);
+
+            for (const name of usedTextures) {
+                const p = allTextures.get(name);
+                if (p) zip.file(`assets/minecraft/textures/parse_armor/${name}.png`, await zip.file(p).async('blob'));
+                const ip = allTextures.get(`${name}_icon`);
+                if (ip) zip.file(`assets/minecraft/textures/parse_armor/${name}_icon.png`, await zip.file(ip).async('blob'));
+            }
+
+            convertedBlob = await zip.generateAsync({ type: "blob" });
+            setProgress(100);
+
+            document.getElementById('statLayer1').textContent = Object.keys(convertedL1).length;
+            document.getElementById('statLayer2').textContent = Object.keys(convertedL2).length;
+            document.getElementById('statTextures').textContent = usedTextures.size;
+            resultsPanel.classList.add('active');
+
+            updateFileStatus(file.name, 'success', `${Object.keys(convertedL1).length + Object.keys(convertedL2).length} items`);
+            addLog(`Done: ${file.name}`, 'success');
+
+        } catch (e) {
+            addLog(`Error: ${file.name}: ${e.message}`, 'error');
+            updateFileStatus(file.name, 'error', t('error'));
+            setStatus(t('error'), 'error');
+            resetProgress();
+        }
+
+        updateButtons();
+    }
+
+    // ── UI helpers ────────────────────────────────────────────
+    function updateFileStatus(fileName, status, text) {
+        const item = document.querySelector(`[data-file="${CSS.escape(fileName)}"]`);
+        if (!item) return;
+        item.className = `file-item status-${status}`;
+        const pill = item.querySelector('.file-status-pill');
+        pill.className = `file-status-pill ${status}`;
+        pill.textContent = text;
+    }
+
+    function formatSize(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+        return (b / 1048576).toFixed(1) + ' MB';
+    }
+
+    function renderFileList() {
+        const n = files.length;
+        fileCountBadge.textContent = n;
+        fileCountBadge.className = 'file-count-badge' + (n > 0 ? ' has-files' : '');
+
+        if (n === 0) {
+            fileList.innerHTML = `
+                <div class="file-empty">
+                    <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                            d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                    </svg>
+                    <span>${t('noFiles')}</span>
+                </div>`;
+            return;
+        }
+
+        fileList.innerHTML = files.map(f => `
+            <div class="file-item" data-file="${f.name}">
+                <div class="file-icon-wrap">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
+                <div class="file-info">
+                    <div class="file-name">${f.name}</div>
+                    <div class="file-size">${formatSize(f.size)}</div>
+                </div>
+                <span class="file-status-pill pending">${t('pending')}</span>
+                <button class="file-remove" onclick="removeFile('${f.name.replace(/'/g, "\\'")}')" title="Remove">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>`).join('');
+    }
+
+    function removeFile(name) {
+        files = files.filter(f => f.name !== name);
+        renderFileList();
+        updateButtons();
+    }
+
+    function updateButtons() {
+        const has = files.length > 0;
+        convertBtn.disabled  = !has;
+        downloadBtn.disabled = !convertedBlob;
+        if (has) {
+            setStatus(t('readyToConvert'), 'idle');
+        } else if (convertedBlob) {
+            setStatus(t('conversionComplete'), 'done');
+        } else {
+            setStatus(t('ready'), 'idle');
+        }
+    }
+
+    function addFiles(newFiles) {
+        newFiles.filter(f => f.name.endsWith('.zip') && !files.some(e => e.name === f.name))
+                .forEach(f => files.push(f));
+        renderFileList();
+        updateButtons();
+        if (newFiles.length) addLog(`${newFiles.length} ${t('fileAdded')}`, 'normal');
+    }
+
+    // ── Event listeners ───────────────────────────────────────
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        addFiles(Array.from(e.dataTransfer.files));
+    });
+
+    fileInput.addEventListener('change', e => { addFiles(Array.from(e.target.files)); e.target.value = ''; });
+
+    convertBtn.addEventListener('click', async () => {
+        addLog('═══ CONVERSION STARTED ═══', 'divider');
+        convertedBlob = null;
+        resultsPanel.classList.remove('active');
+        resetProgress();
+
+        for (const file of files) await processZip(file);
+
+        addLog('═══ CONVERSION COMPLETE ═══', 'divider');
+        setStatus(t('conversionComplete'), 'done');
+        setProgress(100);
+        renderFileList();
+    });
+
+    downloadBtn.addEventListener('click', () => {
+        if (!convertedBlob) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(convertedBlob);
+        a.download = files.length > 0 ? files[0].name.replace('.zip', '_parsearmor.zip') : 'parsearmor_result.zip';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        addLog('File downloaded', 'success');
+    });
+
+    clearBtn.addEventListener('click', () => {
+        files = []; convertedBlob = null;
+        resultsPanel.classList.remove('active');
+        renderFileList(); updateButtons(); clearLog(); resetProgress();
+        addLog(t('cleared'), 'normal');
+        setStatus(t('ready'), 'idle');
+    });
+
+    window.removeFile = removeFile;
+
+    // ── Init ──────────────────────────────────────────────────
+    addLog(t('systemReady'), 'normal');
     </script>
 </body>
 </html>
